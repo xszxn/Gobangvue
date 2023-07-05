@@ -1,6 +1,6 @@
 <template>
   <div class="mapDiv">
-    <div class="button-group">
+    <div class="button-group" v-if="gameMode !== 5">
       <div v-if="gameMode === 4">
         <font v-if="whoDropping">
           <div
@@ -34,7 +34,7 @@
       id="gobangMap"
       @click="onMouseClick"
     > </canvas>
-    <div class="button-group">
+    <div class="button-group" v-if="gameMode !== 5">
       <div
         class="button"
         @click="repent()"
@@ -48,7 +48,7 @@
       </div>
       <div
         class="button"
-        @click="review()"
+        @click="review(0)"
       >
         <font v-if="playing">对局记录中</font>
         <font v-else>复盘</font>
@@ -73,6 +73,7 @@
 
 <script lang="ts">
 import { Component, Prop, Vue } from "vue-property-decorator";
+import global from "@/components/global.vue";
 
 enum PointColor {
   Empty = 0,
@@ -550,6 +551,14 @@ class emptyPoint {
 }
 @Component
 export default class Map extends Vue {
+  listnumber!: number; // 添加类型声明
+  listStack!: Array<Array<[number, number, boolean]>>;
+  data() {
+    return {
+      listnumber: global.listnumber,
+      listStack: global.listStack,
+    }
+  }
   canvasContext!: CanvasRenderingContext2D; //画布对象
   canvasWidth: number = 200; //画布宽度
   canvasHeight: number = 200; //画布高度
@@ -625,12 +634,17 @@ export default class Map extends Vue {
     this.drawChessboard();
     //接收当前模式号
     this.gameMode = parseInt(this.$route.params.mode) | 0;
+    if(this.gameMode == 5) {
+      this.playing = false;
+      this.review(parseInt(this.$route.params.id) | 0);
+      return;
+    }
     //启动游戏AI
     if (this.gameMode !== 0) {
       this.gameAIInvID = setInterval(() => {
         this.gameAI();
       }, 500);
-    } 
+    }
   }
   /**
    * destroyed
@@ -650,6 +664,10 @@ export default class Map extends Vue {
    * @param: {MouseEvent} 鼠标事件 鼠标点击相关参数
    * @return: {void}
    */
+  save_game(): void {
+    global.listnumber ++;
+    global.listStack.push(this.stepStack);
+  }
   onMouseClick(event: MouseEvent): void {
     //将点击的坐标点转换成棋盘矩阵的坐标
     let x: number = Math.round((event.offsetX * 1.0) / this.latticeWidth);
@@ -803,6 +821,7 @@ export default class Map extends Vue {
       this.drawaihelp(pos.x, pos.y);
     }
   }
+
   drawaihelp(x: number, y: number): void {
     //游戏未开始
     if (this.playing === false) return;
@@ -866,10 +885,14 @@ export default class Map extends Vue {
    *   清空落子记录栈，重新绘制棋盘
    * @return: {void}
    */
-  review(): void {
+  review(id: number): void {
     if(this.playing) return;
     this.reviewmode = true;
-    this.stackcopy = JSON.parse(JSON.stringify(this.stepStack));
+    if(id == 0)
+      this.stackcopy = JSON.parse(JSON.stringify(this.stepStack));
+    else {
+      this.stackcopy = JSON.parse(JSON.stringify(global.listStack[id - 1]));
+    }
     this.reviewlength = this.stackcopy.length;
     this.reviewcnt = 0;
     this.drawChessboard(); 
@@ -893,6 +916,7 @@ export default class Map extends Vue {
     this.drawChessboard();
   }
   review_start(): void {
+    this.gameMode = 4;
     for (let i in this.matrix) {
       for (let j in this.matrix[i]) {
         this.matrix[i][j] = PointColor.Empty;
@@ -1168,18 +1192,21 @@ export default class Map extends Vue {
         setTimeout(() => {
           alert("黑子赢了！！！");
         }, 200);
+        this.save_game();
         break;
       case PointColor.White:
         this.playing = false;
         setTimeout(() => {
           alert("白子赢了！！！");
         }, 200);
+        this.save_game();
         break;
       case PointColor.Both:
         this.playing = false;
         setTimeout(() => {
           alert("和棋！！！");
         }, 200);
+        this.save_game();
         break;
 
       default:

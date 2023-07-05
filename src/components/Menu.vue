@@ -15,6 +15,9 @@
         <div class="button" @click="goGame(2)">
             人机人先
         </div>
+        <div class="button" @click="golist()">
+          复盘
+        </div>
         <div class="explain" >
             <div>本项目由开源AI五子棋项目的基础上进行以下功能的开发：</div>
             <div> 1. 悔棋(无限步)</div>
@@ -39,6 +42,15 @@ export default class Menu extends Vue{
             }
         }
         this.$router.push(pageInfo)
+    }
+
+    golist() {
+      let pageInfo:object = {
+        name:"list",
+        params:{
+        }
+      }
+      this.$router.push(pageInfo)
     }
 }
 </script>
